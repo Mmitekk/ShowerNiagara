@@ -21,7 +21,9 @@
 
 1. Скопируйте папку `Plugins/ShowerFX` в папку `Plugins/` вашего проекта.
 2. Скопируйте папку `Content/VFX/Shower` (и при желании демо-уровень `Content/VFX/L_ShowerDemo.umap`) в `Content/` вашего проекта.
-3. Перезапустите редактор и согласитесь включить плагин **ShowerFX** (или включите вручную: Edit → Plugins → ShowerFX).
+3. Запустите проект — дальше всё зависит от типа проекта:
+   - **Проект на C++** — редактор предложит пересобрать модуль `ShowerFX`: соглашайтесь (нужна Visual Studio 2022).
+   - **Блюпринт-проект** — ничего собирать не надо: в репозиторий включены готовые бинарники `Binaries/Win64` для **UE 5.8**, плагин подхватится сразу.
 4. Перетащите `BP_Shower` из `Content/VFX/Shower` в свой уровень.
 
 > Демо-уровень `L_ShowerDemo` показывает душ в «комнате» из плитки — можно использовать как референс освещения и расстановки.
@@ -67,7 +69,7 @@ Media/                    GIF-превью
 
 - Unreal Engine **5.8** (на других версиях не проверялся)
 - Плагин **Niagara** (включён по умолчанию)
-- Для использования C++ актора — сборка проекта из исходников (Visual Studio 2022). Если C++ не нужен, можно пользоваться системами Niagara `NS_*` напрямую.
+- Для блюпринт-проектов: готовые бинарники в репозитории собраны под UE 5.8 Win64; для других версий движка пересоберите плагин из исходников
 
 ### Примечание о звуке
 
@@ -90,9 +92,11 @@ Media/                    GIF-превью
 
 ### Installation
 
-1. Copy `Plugins/ShowerFX` into your project's `Plugins/` folder.
+1. Copy the `Plugins/ShowerFX` folder into your project's `Plugins/` folder.
 2. Copy `Content/VFX/Shower` (and optionally the demo level `Content/VFX/L_ShowerDemo.umap`) into your project's `Content/` folder.
-3. Restart the editor and accept the **ShowerFX** plugin prompt (or enable it manually: Edit → Plugins → ShowerFX).
+3. Open the project — what happens next depends on the project type:
+   - **C++ project** — the editor will offer to rebuild the `ShowerFX` module: accept (requires Visual Studio 2022).
+   - **Blueprint-only project** — nothing to build: the repo ships prebuilt `Binaries/Win64` binaries for **UE 5.8**, so the plugin loads right away.
 4. Drag `BP_Shower` from `Content/VFX/Shower` into your level.
 
 > The `L_ShowerDemo` level shows the shower inside a tiled "room" — use it as a lighting/layout reference.
@@ -138,7 +142,7 @@ Media/                    GIF preview
 
 - Unreal Engine **5.8** (untested on other versions)
 - **Niagara** plugin (enabled by default)
-- Using the C++ actor requires building the project from source (Visual Studio 2022). If you don't need C++, drive the `NS_*` Niagara systems directly.
+- Blueprint-only projects: the prebuilt binaries in this repo target UE 5.8 Win64; for other engine versions rebuild the plugin from source
 
 ### Sound note
 
