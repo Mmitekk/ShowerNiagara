@@ -1,3 +1,3 @@
 #include "Modules/ModuleManager.h"
 
-IMPLEMENT_PRIMARY_GAME_MODULE(FDefaultGameModuleImpl, ShowerFX, "ShowerFX");
+IMPLEMENT_MODULE(FDefaultModuleImpl, ShowerFX)

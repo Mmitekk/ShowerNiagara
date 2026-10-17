@@ -1,0 +1,8 @@
+{
+	"BuildId": "25360045",
+	"Modules": 
+	{
+		"ShowerFX": "UnrealEditor-ShowerFX.dll",
+		"ShowerFXEditor": "UnrealEditor-ShowerFXEditor.dll"
+	}
+}

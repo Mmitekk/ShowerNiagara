@@ -1,5 +1,23 @@
 #include "Modules/ModuleManager.h"
 #include "Misc/EngineVersionComparison.h"
+#include "Containers/Ticker.h"
+#include "Editor.h"
+
+#if UE_VERSION_OLDER_THAN(5, 8, 0)
+
+DEFINE_LOG_CATEGORY_STATIC(LogShowerFXEd, Log, All);
+
+class FShowerFXEditorModule : public IModuleInterface
+{
+public:
+	virtual void StartupModule() override
+	{
+		UE_LOG(LogShowerFXEd, Log, TEXT("ShowerFXEditor: UE < 5.8 detected, automatic Niagara linking is skipped. Link User.* parameters manually in the Niagara UI."));
+	}
+};
+
+#else
+
 #include "NiagaraExternalSystemEditorUtilities.h"
 #include "NiagaraSystem.h"
 #include "NiagaraEmitter.h"
@@ -7,16 +25,7 @@
 #include "NiagaraRendererProperties.h"
 #include "NiagaraSpriteRendererProperties.h"
 #include "Subsystems/AssetEditorSubsystem.h"
-#include "Editor.h"
 #include "LevelEditorViewport.h"
-#include "Containers/Ticker.h"
-#include "Framework/Application/SlateApplication.h"
-#include "Widgets/SWindow.h"
-#if PLATFORM_WINDOWS
-#include "Windows/AllowWindowsPlatformTypes.h"
-#include <Windows.h>
-#include "Windows/HideWindowsPlatformTypes.h"
-#endif
 
 DEFINE_LOG_CATEGORY_STATIC(LogShowerFXEd, Log, All);
 
@@ -31,11 +40,6 @@ namespace ShowerFX
 	static FNiagaraTypeDefinition FloatType() { return FNiagaraTypeDefinition::GetFloatDef(); }
 	static FNiagaraTypeDefinition MaterialType() { return FNiagaraTypeDefinition(UMaterialInterface::StaticClass()); }
 	static FNiagaraTypeDefinition LinearColorType() { return FNiagaraTypeDefinition::GetColorDef(); }
-
-
-	static bool StartupTick(float);
-	static bool RealtimeTick(float);
-	static void FixShowerSystems();
 
 	static void CloseEditorsFor(UNiagaraSystem* Sys)
 	{
@@ -78,6 +82,7 @@ namespace ShowerFX
 		UNiagaraExternalEditUtilities::AddUserVariable(Sys, Var, Ctx);
 		UE_LOG(LogShowerFXEd, Log, TEXT("[%s] added user var %s"), *Sys->GetName(), *Name.ToString());
 	}
+
 	static void EnsureLinearColorVar(UNiagaraSystem* Sys, FName Name, const FLinearColor& Default)
 	{
 		FNiagaraExternalEditContext Ctx(Sys);
@@ -101,7 +106,6 @@ namespace ShowerFX
 		FNiagaraExt_StackItemReference Ref(Sys, Emitter, Script, Module);
 		Ref.InputNameStack = {Input};
 
-		// Skip if already linked to the right variable (idempotence)
 		FNiagaraExt_StackInputValue Current;
 		UNiagaraExternalEditUtilities::GetStackInputData(Ref, Current, Ctx);
 		if (FNiagaraExt_StackInputData_Linked* Linked = Current.GetMutablePtr<FNiagaraExt_StackInputData_Linked>())
@@ -144,73 +148,6 @@ namespace ShowerFX
 		}
 	}
 
-	static void BringEditorToFront()
-	{
-#if PLATFORM_WINDOWS
-		if (FSlateApplication::IsInitialized())
-		{
-			TSharedPtr<SWindow> Root = FSlateApplication::IsInitialized() ? FSlateApplication::Get().GetActiveTopLevelWindow() : nullptr;
-			if (!Root.IsValid())
-			{
-				for (const TSharedRef<SWindow>& W : FSlateApplication::Get().GetInteractiveTopLevelWindows())
-				{
-					Root = W;
-					break;
-				}
-			}
-			if (Root.IsValid())
-			{
-				HWND Hwnd = (HWND)Root->GetNativeWindow()->GetOSWindowHandle();
-				if (Hwnd && ::GetForegroundWindow() != Hwnd)
-				{
-					::SetForegroundWindow(Hwnd);
-					UE_LOG(LogShowerFXEd, Log, TEXT("ShowerFX: brought editor to foreground (background editors throttle Niagara previews)"));
-				}
-			}
-		}
-#endif
-	}
-
-	static void ForceRealtime()
-	{
-		if (!GEditor)
-		{
-			return;
-		}
-		int32 N = 0;
-		for (FLevelEditorViewportClient* VC : GEditor->GetLevelViewportClients())
-		{
-			if (VC && !VC->IsRealtime())
-			{
-				VC->SetRealtime(true);
-				++N;
-			}
-		}
-		if (N > 0)
-		{
-			UE_LOG(LogShowerFXEd, Log, TEXT("ShowerFX: forced realtime on %d viewport(s)"), N);
-		}
-	}
-
-	static bool StartupTick(float)
-	{
-		BringEditorToFront();
-		ForceRealtime();
-		FixShowerSystems();
-		return false; // one-shot
-	}
-
-	static bool RealtimeTick(float)
-	{
-		ForceRealtime();
-		return false; // one-shot
-	}
-
-	static void OnMapOpened(const FString&, bool)
-	{
-		FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateStatic(&RealtimeTick), 2.0f);
-	}
-
 	static void FixShowerSystems()
 	{
 		UE_LOG(LogShowerFXEd, Log, TEXT("ShowerFX fixer: start"));
@@ -218,7 +155,6 @@ namespace ShowerFX
 		UMaterialInterface* WaterMatDefault = LoadObject<UMaterialInterface>(nullptr, WaterMatDefaultPath);
 		UMaterialInterface* SteamMatDefault = LoadObject<UMaterialInterface>(nullptr, SteamMatDefaultPath);
 
-		struct FFix { const TCHAR* Path; };
 		const TCHAR* Paths[] = {WaterSystemPath, SplashSystemPath, SteamSystemPath};
 
 		TArray<UNiagaraSystem*> Fixed;
@@ -280,6 +216,45 @@ namespace ShowerFX
 		}
 		UE_LOG(LogShowerFXEd, Log, TEXT("ShowerFX fixer: done (%d systems)"), Fixed.Num());
 	}
+
+	static void ForceRealtime()
+	{
+		if (!GEditor)
+		{
+			return;
+		}
+		int32 N = 0;
+		for (FLevelEditorViewportClient* VC : GEditor->GetLevelViewportClients())
+		{
+			if (VC && !VC->IsRealtime())
+			{
+				VC->SetRealtime(true);
+				++N;
+			}
+		}
+		if (N > 0)
+		{
+			UE_LOG(LogShowerFXEd, Log, TEXT("ShowerFX: forced realtime on %d viewport(s)"), N);
+		}
+	}
+
+	static bool StartupTick(float)
+	{
+		ForceRealtime();
+		FixShowerSystems();
+		return false; // one-shot
+	}
+
+	static bool RealtimeTick(float)
+	{
+		ForceRealtime();
+		return false; // one-shot
+	}
+
+	static void OnMapOpened(const FString&, bool)
+	{
+		FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateStatic(&RealtimeTick), 2.0f);
+	}
 }
 
 class FShowerFXEditorModule : public IModuleInterface
@@ -287,12 +262,11 @@ class FShowerFXEditorModule : public IModuleInterface
 public:
 	virtual void StartupModule() override
 	{
-		// Run once after the editor is fully initialized and assets are available.
 		FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateStatic(&ShowerFX::StartupTick), 20.0f);
-		// Keep realtime on whenever a map opens (some editor sessions restore it off,
-		// which freezes Niagara previews).
 		FEditorDelegates::OnMapOpened.AddStatic(&ShowerFX::OnMapOpened);
 	}
 };
+
+#endif
 
 IMPLEMENT_MODULE(FShowerFXEditorModule, ShowerFXEditor)
