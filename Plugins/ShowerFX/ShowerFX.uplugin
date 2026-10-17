@@ -1,0 +1,26 @@
+{
+  "FileVersion": 3,
+  "FriendlyName": "ShowerFX",
+  "Description": "Self-contained shower water/steam VFX actor with live-adjustable parameters.",
+  "Category": "FX",
+  "CanContainContent": false,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "ShowerFX",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
+      "Name": "ShowerFXEditor",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "Niagara",
+      "Enabled": true
+    }
+  ]
+}
